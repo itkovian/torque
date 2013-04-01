@@ -38,7 +38,7 @@ void term_job(job *pjob);
 
 void im_eof(int stream, int ret);
 
-int check_ms(struct tcp_chan *chan, job *pjob);
+int check_ms(struct tcp_chan *chan, job *pjob, struct sockaddr_in *source_addr);
 
 u_long resc_used(job *pjob, char *name, u_long(*func)(resource *));
 

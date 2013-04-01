@@ -1095,6 +1095,7 @@ void job_start_error(
         nodename);
 
       log_err(code, pjob->ji_qs.ji_jobid, log_buffer);
+      log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_JOB, pjob->ji_qs.ji_jobid, log_buffer);
 
       exec_bail(pjob, JOB_EXEC_RETRY);
 
@@ -1136,6 +1137,9 @@ void job_start_error(
             next job status query from pbs_server? */
 
   /* NOTE:  exec_bail() will issue 'send_sisters(pjob,IM_ABORT_JOB);' */
+
+  snprintf(log_buffer, sizeof(log_buffer), "job %s failing on startup", pjob->ji_qs.ji_jobid);
+  log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_JOB, __func__, log_buffer);
 
   exec_bail(pjob, JOB_EXEC_RETRY);
 
@@ -1423,18 +1427,16 @@ void term_job(
 int check_ms(
 
   struct tcp_chan *chan,
-  job *pjob)    /* I */
+  job *pjob,    /* I */
+  struct sockaddr_in *source_addr)
 
   {
   struct sockaddr_in *addr;
-  struct sockaddr     s_addr;
-  unsigned int        len = sizeof(s_addr);
   unsigned long       ipaddr_connect;
   hnodent            *np;
   unsigned long       ipaddr_ms;
  
-  getpeername(chan->sock,&s_addr,&len);
-  addr = (struct sockaddr_in *)&s_addr;
+  addr = source_addr;
   ipaddr_connect = ntohl(addr->sin_addr.s_addr);
 
   if ((port_care != 0) && 
@@ -2081,9 +2083,6 @@ int im_join_job_as_sister(
 
   unsigned short       momport = 0;
 
-  if (check_ms(chan, NULL))
-    return(IM_FINISHED);
-  
   nodeid = disrsi(chan, &ret);
   
   if (ret != DIS_SUCCESS)
@@ -4321,9 +4320,6 @@ int handle_im_get_tid_response(
   hnodent  *np;
   task     *ptask;
 
-  if (check_ms(chan, pjob))
-    return(IM_FINISHED);
-
   taskid = disrsi(chan, &ret);
   
   if (ret != DIS_SUCCESS)
@@ -4702,7 +4698,13 @@ void im_request(
     {
     case IM_JOIN_JOB:
       {
-      ret = im_join_job_as_sister(chan,jobid,pSockAddr,cookie,event,fromtask,command,FALSE);
+      if (check_ms(chan, NULL, pSockAddr) == FALSE)
+        {
+        ret = im_join_job_as_sister(chan,jobid,pSockAddr,cookie,event,fromtask,command,FALSE);
+        }
+      else
+        ret = IM_FAILURE;
+
       close_conn(chan->sock, FALSE);
       svr_conn[chan->sock].cn_stay_open = FALSE;
       chan->sock = -1;
@@ -4717,7 +4719,13 @@ void im_request(
  
     case IM_JOIN_JOB_RADIX:
       {
-      ret = im_join_job_as_sister(chan,jobid,pSockAddr,cookie,event,fromtask,command,TRUE);
+      if (check_ms(chan, NULL, pSockAddr) == FALSE)
+        {
+        ret = im_join_job_as_sister(chan,jobid,pSockAddr,cookie,event,fromtask,command,TRUE);
+        }
+      else
+        ret = IM_FAILURE;
+
       close_conn(chan->sock, FALSE);
       svr_conn[chan->sock].cn_stay_open = FALSE;
       chan->sock = -1;
@@ -4775,7 +4783,7 @@ void im_request(
       netaddr(pSockAddr),
       jobid);
 
-    log_event(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, jobid, log_buffer);
+    log_event(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, __func__, log_buffer);
 
     send_im_error(PBSE_BADSTATE,1,pjob,cookie,event,fromtask);
     close_conn(chan->sock, FALSE);
@@ -4789,6 +4797,8 @@ void im_request(
  
   if (strcmp(oreo, cookie) != 0)
     {
+    snprintf(log_buffer, sizeof(log_buffer), "Bad cookie: job id %s", pjob->ji_qs.ji_jobid);
+    log_event(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, __func__, log_buffer);
     /* multiple versions of the same job are out there, kill it */
     exec_bail(pjob, JOB_EXEC_FAIL1);
 
@@ -4881,7 +4891,7 @@ void im_request(
     {
     case IM_KILL_JOB:
       {
-      if (check_ms(chan, pjob) == FALSE)
+      if (check_ms(chan, pjob, pSockAddr) == FALSE)
         im_kill_job_as_sister(pjob,event,momport,FALSE);
       close_conn(chan->sock, FALSE);
       svr_conn[chan->sock].cn_stay_open = FALSE;
@@ -4973,7 +4983,7 @@ void im_request(
     case IM_POLL_JOB:
       {
       /* check the validity of our connection */
-      if ((ret = check_ms(chan, pjob)) == TRUE)
+      if ((ret = check_ms(chan, pjob, pSockAddr)) == TRUE)
         {
         close_conn(chan->sock, FALSE);
         svr_conn[chan->sock].cn_stay_open = FALSE;
@@ -4994,31 +5004,38 @@ void im_request(
     case IM_ABORT_JOB:
       {
       /* check the validity of our connection */
-      if ((ret = check_ms(chan, pjob)) == TRUE)
+      if ((ret = check_ms(chan, pjob, pSockAddr)) == TRUE)
         {
-        close_conn(chan->sock, FALSE);
-        svr_conn[chan->sock].cn_stay_open = FALSE;
-        chan->sock = -1;
-        log_err(-1, __func__, "check_ms error IM_ABORT_JOB");
-        goto err;
+        if (pjob->ji_qs.ji_svrflags & (~JOB_SVFLG_JOB_ABORTED))
+          {
+          pjob->ji_qs.ji_svrflags |= JOB_SVFLG_JOB_ABORTED;
+          exec_bail(pjob, JOB_EXEC_RETRY);
+          sprintf(log_buffer, "%s sent an abort. Killing job %s", netaddr(pSockAddr), pjob->ji_qs.ji_jobid);
+          log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_JOB, __func__, log_buffer);
+          }
         }
-      
-      im_abort_job(pjob,pSockAddr,cookie,event,fromtask);
+      else
+        im_abort_job(pjob,pSockAddr,cookie,event,fromtask);
 
+      close_conn(chan->sock, FALSE);
+      svr_conn[chan->sock].cn_stay_open = FALSE;
+      chan->sock = -1;
       break;
       }
     
     case IM_GET_TID:
       {
-      if ((ret = im_get_tid(pjob,cookie,event,fromtask)) == IM_FAILURE)
+      if (check_ms(chan, NULL, pSockAddr) == FALSE)
         {
-        close_conn(chan->sock, FALSE);
-        svr_conn[chan->sock].cn_stay_open = FALSE;
-        chan->sock = -1;
-        log_err(-1, __func__, "im_get_tid error");
-        goto err;
+        ret = handle_im_get_tid_response(chan,pjob,cookie,argv,envp,&efwd);
         }
-
+      else
+        {
+        ret = IM_FAILURE;
+        }
+      close_conn(chan->sock, FALSE);
+      svr_conn[chan->sock].cn_stay_open = FALSE;
+      chan->sock = -1;
       break;
       }
 
@@ -5294,10 +5311,11 @@ void im_request(
                   
                   if (log_buffer[0] != '\0')
                     {
-                    sprintf(log_buffer, "tcp_connect_sockaddr failed on %s", np->hn_host);
+                    sprintf(log_buffer, "tcp_connect_sockaddr failed on %s - job id %s", np->hn_host, pjob->ji_qs.ji_jobid);
                     }
                   
                   log_err(errno, __func__, log_buffer);
+                  log_event(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, __func__, log_buffer);
                   
                   exec_bail(pjob, JOB_EXEC_FAIL1);
                   }
@@ -5614,7 +5632,7 @@ void im_request(
       /* What's the purpose of this? *MUTSU* */
       if (event_com == IM_GET_TID)
         {
-        if ((ret = check_ms(chan, pjob)) == TRUE)
+        if ((ret = check_ms(chan, pjob, pSockAddr)) == TRUE)
           {
           close_conn(chan->sock, FALSE);
           svr_conn[chan->sock].cn_stay_open = FALSE;
