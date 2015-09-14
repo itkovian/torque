@@ -4654,7 +4654,7 @@ void scan_non_child_tasks(void)
         if((job_start_time != 0)&&
             (session_start_time != 0))
           {
-          if(abs(job_start_time - session_start_time) < 5)
+          if(abs(job_start_time - session_start_time) < 3600)
             {
             found = 1;
             }
@@ -4707,7 +4707,7 @@ void scan_non_child_tasks(void)
               proc_stat_t *ts = get_proc_stat(ps->session);
               if(ts == NULL)
                 continue;
-              if(ts->start_time == (unsigned long)pJob->ji_wattr[JOB_ATR_system_start_time].at_val.at_long)
+              if(abs(ts->start_time - (unsigned long)pJob->ji_wattr[JOB_ATR_system_start_time].at_val.at_long) < 3600)
                 {
                 found = 1;
                 break;
