@@ -2583,7 +2583,7 @@ int TMomFinalizeJob2(
 
   /* we have to take care of setting NVIDIA gpus in the parent */
 #ifdef NVIDIA_GPUS
-  if (use_nvidia_gpu) 
+  if (use_nvidia_gpu)
     {
     int rc;
 
@@ -2670,10 +2670,10 @@ int TMomFinalizeJob2(
 
   /* put the new pid in the pid to job session id map */
   pid2jobsid_map[cpid] = cpid;
-  
+
   /* put the new pid in the global_job_sid_set set */
   global_job_sid_set.insert(cpid);
-  
+
   pjob->ji_job_pid_set->insert(cpid);
 
 #if SHELL_USE_ARGV == 0
@@ -4225,7 +4225,7 @@ unsigned long long get_memory_in_kilobytes_from_size(
 
   {
   int shift = sz.atsv_shift;
-  
+
   unsigned long long mem = sz.atsv_num;
 
   /* make sure that the requested memory is in kb */
@@ -4264,7 +4264,7 @@ int get_cpu_count_requested_on_this_node(
     }
 
   return(cpus);
-  } 
+  }
 
 
 
@@ -4281,7 +4281,7 @@ unsigned long long get_memory_limit_from_resource_list(
 
   {
   unsigned long long mem_limit = 0;
-  
+
   resource  *mem = find_resc_entry(&pjob->ji_wattr[JOB_ATR_resource],
                                    find_resc_def(svr_resc_def, "mem", svr_resc_size));
 
@@ -4301,6 +4301,7 @@ unsigned long long get_memory_limit_from_resource_list(
 
     // make sure the memory is evenly set over the job.
     double    mem_pcnt = ((double)cpu_count) / pjob->ji_numvnod;
+    mem_pcnt = 1.0;
     mem_limit = mem_limit * mem_pcnt;
     }
   else
@@ -4314,7 +4315,7 @@ unsigned long long get_memory_limit_from_resource_list(
       mem = find_resc_entry(&pjob->ji_wattr[JOB_ATR_resource],
                             find_resc_def(svr_resc_def, "pvmem", svr_resc_size));
       }
-    
+
     if (mem != NULL)
       {
       mem_limit = get_memory_in_kilobytes_from_size(mem->rs_value.at_val.at_size);
@@ -4442,7 +4443,7 @@ int set_job_cgroup_memory_limits(
         return(rc);
         }
       }
- 
+
     rc = trq_cg_set_swap_memory_limit(pjob->ji_qs.ji_jobid, swap_limit);
     if (rc != PBSE_NONE)
       {
@@ -5322,7 +5323,7 @@ int TMomFinalizeJob3(
 
 
 int get_process_rank(
-  
+
   int &rank)
 
   {
@@ -5604,15 +5605,15 @@ int start_process(
       /* put the job pid in the job structure */
       pjob->ji_job_pid_set->insert(pid);
       }
-    
+
     /* put the new pid in the pid to job session id map */
     pid2jobsid_map[pid] = pid;
-    
+
     /* put the new pid in the global_job_sid_set set */
     global_job_sid_set.insert(pid);
 
     /* we now need to add the task to the cgroup */
-    
+
     ptask->ti_qs.ti_status = TI_STATE_RUNNING;
 
     if (LOGLEVEL >= 6)
@@ -5880,18 +5881,18 @@ int start_process(
         if (rc == PBSE_NONE)
           {
 
-          rc = trq_cg_add_process_to_task_cgroup(cg_cpuacct_path, 
+          rc = trq_cg_add_process_to_task_cgroup(cg_cpuacct_path,
                               pjob->ji_qs.ji_jobid, req_index, task_index, new_pid);
           if (rc == PBSE_NONE)
             {
-            rc = trq_cg_add_process_to_task_cgroup(cg_cpuset_path, 
+            rc = trq_cg_add_process_to_task_cgroup(cg_cpuset_path,
                               pjob->ji_qs.ji_jobid, req_index, task_index, new_pid);
             if (rc == PBSE_NONE)
               {
-              rc = trq_cg_add_process_to_task_cgroup(cg_memory_path, 
+              rc = trq_cg_add_process_to_task_cgroup(cg_memory_path,
                               pjob->ji_qs.ji_jobid, req_index, task_index, new_pid);
               if (rc == PBSE_NONE)
-                rc = trq_cg_add_process_to_task_cgroup(cg_devices_path, 
+                rc = trq_cg_add_process_to_task_cgroup(cg_devices_path,
                               pjob->ji_qs.ji_jobid, req_index, task_index, new_pid);
               }
             }
@@ -5900,7 +5901,7 @@ int start_process(
       }
     }
 
-  /* if rc is not PBSE_NONE just add the process id to the main cgroup. We still will not 
+  /* if rc is not PBSE_NONE just add the process id to the main cgroup. We still will not
      fail the job. This will work for -l requests as well */
   if (rc != PBSE_NONE)
     {
@@ -6401,7 +6402,7 @@ int job_nodes(
     CLEAR_HEAD(hp.hn_events);
 
 #ifdef NUMA_SUPPORT
-    /* if this is a SGI UV or other shared memory system 
+    /* if this is a SGI UV or other shared memory system
        remove the suffix for the node name before resolving the address */
     std::size_t last_dash = host.find_last_of("-");
     if (last_dash != std::string::npos)
@@ -7046,7 +7047,7 @@ int start_exec(
 
   /* check creds early because we need the uid/gid for TMakeTmpDir() */
   bool good;
-  
+
   good = check_pwd(pjob);
   if (good == false)
     {
