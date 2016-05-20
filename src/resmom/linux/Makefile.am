@@ -4,7 +4,8 @@ CHECK_DIR = test
 
 DIST_SUBDIRS =
 
-noinst_HEADERS = lib_mom.h mom_mach.h
+include_HEADERS = lib_mom.h
+noinst_HEADERS = mom_mach.h
 
 AM_CPPFLAGS += -DPBS_MOM -DDEMUX=\"$(DEMUX_PATH)\" 
 

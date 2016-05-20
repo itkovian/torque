@@ -2,7 +2,7 @@ include $(top_srcdir)/buildutils/config.mk
 
 CHECK_DIR = test
 
-noinst_HEADERS = u_lock_ctl.h lib_utils.h
+include_HEADERS = u_lock_ctl.h lib_utils.h
 
 DIST_SUBDIRS =
 CLEANFILES = *.gcda *.gcno *.gcov

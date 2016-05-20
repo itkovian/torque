@@ -2,7 +2,7 @@ include $(top_srcdir)/buildutils/config.mk
 
 CHECK_DIR = test
 
-noinst_HEADERS=lib_net.h
+include_HEADERS = lib_net.h
 
 DIST_SUBDIRS =
 
