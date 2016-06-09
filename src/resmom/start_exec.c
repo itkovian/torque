@@ -4359,6 +4359,7 @@ unsigned long long get_memory_limit_for_this_host(
     }
 
   sprintf(log_buffer, "DEBUG ageorges: complete request: %s\n", output.c_str());
+  log_ext(-1, __func__, log_buffer, LOG_ERR);
 
   if (mem_limit == 0)
     {

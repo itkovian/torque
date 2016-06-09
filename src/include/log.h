@@ -85,8 +85,8 @@
 #define LOG_H
 
 #include <pthread.h>
-#define LOG_BUF_SIZE        16384
-#define LOCAL_LOG_BUF_SIZE  5096
+#define LOG_BUF_SIZE        163840
+#define LOCAL_LOG_BUF_SIZE  50960
 
 /* The following macro assist in sharing code between the Server and Mom */
 #define LOG_EVENT log_event
