@@ -4350,9 +4350,15 @@ unsigned long long get_memory_limit_for_this_host(
 
   {
   unsigned long long mem_limit = 0;
+  std::string output;
 
   if (cr != NULL)
+    {
     mem_limit = cr->get_memory_for_this_host(string_hostname);
+    cr->toString(output);
+    }
+
+  sprintf(log_buffer, "DEBUG ageorges: complete request: %s\n", output.c_str());
 
   if (mem_limit == 0)
     {
